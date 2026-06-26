@@ -1,7 +1,11 @@
 import csv
 import sys
 from datetime import datetime
+
 from app.config import PINGS_CSV_PATH, VEHICLES_CSV_PATH, TS_FORMATS, PROJECT_PATH
+from app.utils.logging_config import configure_logging
+
+logger = configure_logging()
 
 
 class CSVRepository:
@@ -41,10 +45,10 @@ class CSVRepository:
                 csv_reader = csv.DictReader(file)
                 data = list(csv_reader)
         except FileNotFoundError:
-            print(f"Error: File not found at {file_path}")
+            logger.error("CSV file not found at %s", file_path)
             sys.exit(1)
         except Exception as e:
-            print(f"Error reading CSV file: {e}")
+            logger.error("Error reading CSV file %s: %s", file_path, e)
             sys.exit(1)
         return data
 
@@ -94,7 +98,7 @@ class CSVRepository:
                 unprocessable_pings.append(ping)
         
         if len(processed_pings) == 0:
-            print("ERROR: No pings were successfully processed!")
+            logger.error("No pings were successfully processed")
             sys.exit(1)
         
         if unprocessable_pings:
@@ -107,7 +111,7 @@ class CSVRepository:
                     writer.writeheader()
                     writer.writerows(unprocessable_pings)
             except Exception as e:
-                print(f"Error writing unprocessable pings to CSV: {e}")
-            print(f"UNPROCESSABLE PING ENTRIES ({len(unprocessable_pings)})")
+                logger.error("Error writing unprocessable pings to CSV: %s", e)
+            logger.warning("Unprocessable ping entries (%s)", len(unprocessable_pings))
         
         return processed_pings

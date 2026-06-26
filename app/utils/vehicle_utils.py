@@ -1,5 +1,8 @@
 from app.utils.csv_repository import CSVRepository
 from app.config import MAX_REASONABLE_SPEED_KMPH, MIN_ACTIVE_DAYS
+from app.utils.logging_config import configure_logging
+
+logger = configure_logging()
 
 
 class Vehicles:
@@ -50,18 +53,29 @@ class Vehicles:
             if last_odometer is not None and last_ping_ts is not None:
                 distance = odometer - last_odometer
                 if distance < 0:
-                    print(f"Warning: Odometer reading decreased for device {ping['device_id']} at {ping['ts']}," 
-                          f"indicating device reset/replaced. Ignoring this reading.")
+                    logger.warning(
+                        "Odometer reading decreased for device %s at %s, indicating device reset/replaced. Ignoring this reading.",
+                        ping["device_id"],
+                        ping["ts"],
+                    )
                     continue
                 time_diff_hours = (ping['ts'] - last_ping_ts).total_seconds() / 3600
                 if time_diff_hours <= 0:
-                    print(f"Warning: Non-positive time difference for device {ping['device_id']} at {ping['ts']}. "
-                          f"Time difference: {time_diff_hours:.2f} hours. Ignoring this reading.")
+                    logger.warning(
+                        "Non-positive time difference for device %s at %s. Time difference: %.2f hours. Ignoring this reading.",
+                        ping["device_id"],
+                        ping["ts"],
+                        time_diff_hours,
+                    )
                     continue
                 speed = distance / time_diff_hours
                 if speed > MAX_REASONABLE_SPEED_KMPH:
-                    print(f"Warning: Unreasonable speed detected for device {ping['device_id']} at {ping['ts']}. "
-                          f"Speed: {speed:.2f} km/h. Ignoring this reading.")
+                    logger.warning(
+                        "Unreasonable speed detected for device %s at %s. Speed: %.2f km/h. Ignoring this reading.",
+                        ping["device_id"],
+                        ping["ts"],
+                        speed,
+                    )
                     continue
                 total_distance += distance
             last_odometer = odometer
