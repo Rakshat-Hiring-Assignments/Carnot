@@ -15,3 +15,4 @@ VEHICLES_CSV_PATH = PROJECT_PATH / config["data"]["vehicles"]
 
 TS_FORMATS = config["processing"]["ts_formats"]
 MAX_REASONABLE_SPEED_KMPH = config["processing"]["max_reasonable_speed_kmph"]
+MIN_ACTIVE_DAYS = config["processing"]["min_active_days"]

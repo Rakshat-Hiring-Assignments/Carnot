@@ -14,3 +14,4 @@ ts_formats = [
     "%Y-%m-%d %H:%M:%S",
 ]
 max_reasonable_speed_kmph = 60
+min_active_days = 7

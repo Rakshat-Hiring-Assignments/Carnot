@@ -1,5 +1,5 @@
 from app.utils.csv_repository import CSVRepository
-from app.config import MAX_REASONABLE_SPEED_KMPH
+from app.config import MAX_REASONABLE_SPEED_KMPH, MIN_ACTIVE_DAYS
 
 
 class Vehicles:
@@ -81,26 +81,36 @@ class Vehicles:
         """
         active_days = set()
         active_days_count = 0
-        prev_date = None
+        curr_date = None
         first_odometer = None
         last_odometer = None
-        
+        curr_date_movement = False
+        day_movement_list = []
 
         for ping in pings:
-
             if not ping.get('odometer_km'):
                 continue  # Skip if odometer_km is None or 0
 
-            if prev_date is not None and ping['ts'].date() == prev_date:
-                continue  # Skip if the date is the same as the previous ping
-
+            last_odometer = ping.get('odometer_km')
             if not first_odometer:
                 first_odometer = ping.get('odometer_km')
-            last_odometer = ping.get('odometer_km')
-
-            distance_covered = last_odometer - first_odometer
-            if distance_covered > 0:
-                active_days.add(ping['ts'].date())
-                active_days_count += 1
-            prev_date = ping['ts'].date()
-        return active_days_count, 'active' if active_days_count > 0 else 'inactive'
+            
+            if curr_date:
+                if ping['ts'].date() == curr_date:
+                    curr_date_movement = True if last_odometer > first_odometer else curr_date_movement
+                    continue  # Skip if the date is the same as the previous ping
+                else:
+                    day_movement_list.append(curr_date_movement)
+                    if curr_date_movement:
+                        active_days.add(curr_date)
+                        active_days_count += 1
+                    curr_date_movement = False
+                    first_odometer = None  # Reset for the new date
+            curr_date = ping['ts'].date()
+        
+        if (len(day_movement_list) < MIN_ACTIVE_DAYS or 
+                False in day_movement_list[-MIN_ACTIVE_DAYS:]):
+            status = 'inactive'
+        else:
+            status = 'active'
+        return active_days_count, status
