@@ -6,7 +6,6 @@ from app.utils.logging_config import configure_logging
 
 logger = configure_logging()
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("API started")
@@ -15,7 +14,6 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
-
 app.include_router(router, prefix="/vehicles", tags=["vehicles"])
 
 
