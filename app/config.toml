@@ -1,0 +1,13 @@
+[app]
+host = "0.0.0.0"
+port = 8000
+
+[data]
+pings_csv = "pings.csv"
+vehicles = "vehicles.csv"
+ts_formats = [
+    "%d/%m/%Y %H:%M",
+    "%Y-%m-%dT%H:%M:%S",
+    "%d-%b-%Y %H:%M:%S",
+    "%Y-%m-%d %H:%M:%S",
+]
