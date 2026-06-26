@@ -5,9 +5,12 @@ port = 8000
 [data]
 pings_csv = "pings.csv"
 vehicles = "vehicles.csv"
+
+[processing]
 ts_formats = [
     "%d/%m/%Y %H:%M",
     "%Y-%m-%dT%H:%M:%S",
     "%d-%b-%Y %H:%M:%S",
     "%Y-%m-%d %H:%M:%S",
 ]
+max_reasonable_speed_kmph = 60

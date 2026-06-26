@@ -71,7 +71,7 @@ class CSVRepository:
             # Normalize odometer_km: empty values become 0.0
             odometer_value = ping.get('odometer_km', '')
             if isinstance(odometer_value, str) and odometer_value.strip() == '':
-                ping['odometer_km'] = 0.0
+                ping['odometer_km'] = None
             else:
                 try:
                     ping['odometer_km'] = float(str(odometer_value).strip())
