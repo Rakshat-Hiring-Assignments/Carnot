@@ -46,9 +46,11 @@ class CSVRepository:
                 data = list(csv_reader)
         except FileNotFoundError:
             logger.error("CSV file not found at %s", file_path)
+            print("CSV file not found at: ", file_path)
             sys.exit(1)
         except Exception as e:
             logger.error("Error reading CSV file %s: %s", file_path, e)
+            print(f"Error reading CSV file {file_path}: {e}")
             sys.exit(1)
         return data
 
@@ -99,6 +101,8 @@ class CSVRepository:
         
         if len(processed_pings) == 0:
             logger.error("No pings were successfully processed")
+            print("No pings were successfully processed.  " \
+                    "Check unprocessable_pings.csv for issues.")
             sys.exit(1)
         
         if unprocessable_pings:
