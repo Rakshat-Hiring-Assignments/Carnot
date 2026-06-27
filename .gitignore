@@ -2,4 +2,4 @@ __pycache__/
 *.pyc
 .*
 LOGS/
-unprocessable_pings.csv
+outputs/

@@ -2,7 +2,7 @@ import csv
 import sys
 from datetime import datetime
 
-from app.config import PINGS_CSV_PATH, VEHICLES_CSV_PATH, TS_FORMATS, PROJECT_PATH
+from app.config import PINGS_CSV_PATH, VEHICLES_CSV_PATH, TS_FORMATS, OUTPUT_FOLDER_PATH
 from app.utils.logging_config import configure_logging
 
 logger = configure_logging()
@@ -107,7 +107,9 @@ class CSVRepository:
         
         if unprocessable_pings:
             # Write unprocessable pings to CSV
-            output_path = PROJECT_PATH / "unprocessable_pings.csv"
+            output_dir = OUTPUT_FOLDER_PATH
+            output_dir.mkdir(exist_ok=True)
+            output_path = output_dir / "unprocessable_pings.csv"
             try:
                 with open(output_path, 'w', newline='', encoding='utf-8') as f:
                     fieldnames = unprocessable_pings[0].keys()
