@@ -34,6 +34,8 @@ app/
 ├── config.toml
 └── main.py
 LOGS/
+tests/
+outputs/
 README.md
 requirements.txt
 ```
@@ -63,23 +65,46 @@ Example response:
 # How to Run
 
 ## Prerequisites
-* Python 3.12+
-* uv
 
-## Install dependencies
+- `Python 3.12+`
+- `uv`
+
+## Clone the repository
 
 ```bash
 git clone https://github.com/Rakshat-Hiring-Assignments/Carnot.git
 cd Carnot
+```
+
+## Using `uv` (Recommended)
+
+### Install dependencies
+
+```bash
 uv sync
 ```
 
-## Start the server
+### Start the server
 
 ```bash
 uv run uvicorn app.main:app
 ```
 
+---
+
+# Running Without `uv`
+
+## Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+## Start the server
+
+```bash
+python -m app.main
+```
 API documentation:
 
 ```
