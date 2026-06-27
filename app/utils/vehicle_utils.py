@@ -48,17 +48,9 @@ class Vehicles:
         last_ping_ts = None
         for ping in pings:
             odometer = ping.get('odometer_km', None)
-            if not odometer or odometer < 0:
+            if odometer is None or odometer < 0:
                 continue
             if last_odometer is not None and last_ping_ts is not None:
-                distance = odometer - last_odometer
-                if distance < 0:
-                    logger.warning(
-                        "Odometer reading decreased for device %s at %s, indicating device reset/replaced. Ignoring this reading.",
-                        ping["device_id"],
-                        ping["ts"],
-                    )
-                    continue
                 time_diff_hours = (ping['ts'] - last_ping_ts).total_seconds() / 3600
                 if time_diff_hours <= 0:
                     logger.warning(
@@ -68,6 +60,16 @@ class Vehicles:
                         time_diff_hours,
                     )
                     continue
+                distance = odometer - last_odometer
+                if distance < 0:
+                    logger.warning(
+                        "Odometer reading decreased for device %s at %s, indicating device reset/replaced. Ignoring this reading.",
+                        ping["device_id"],
+                        ping["ts"],
+                    )
+                    last_odometer = odometer
+                    last_ping_ts = ping['ts']
+                    continue
                 speed = distance / time_diff_hours
                 if speed > MAX_REASONABLE_SPEED_KMPH:
                     logger.warning(
@@ -76,10 +78,13 @@ class Vehicles:
                         ping["ts"],
                         speed,
                     )
+                    last_odometer = odometer
+                    last_ping_ts = ping['ts']
                     continue
                 total_distance += distance
             last_odometer = odometer
             last_ping_ts = ping['ts']
+
         return total_distance
 
     def compute_active_days(self, pings):
@@ -93,7 +98,6 @@ class Vehicles:
             int: Number of unique active days
             str: Status ('active' or 'inactive')
         """
-        active_days = set()
         active_days_count = 0
         curr_date = None
         first_odometer = None
@@ -102,7 +106,7 @@ class Vehicles:
         day_movement_list = []
 
         for ping in pings:
-            if not ping.get('odometer_km'):
+            if ping.get('odometer_km') is None:
                 continue  # Skip if odometer_km is None or 0
 
             last_odometer = ping.get('odometer_km')
@@ -116,11 +120,15 @@ class Vehicles:
                 else:
                     day_movement_list.append(curr_date_movement)
                     if curr_date_movement:
-                        active_days.add(curr_date)
                         active_days_count += 1
                     curr_date_movement = False
                     first_odometer = None  # Reset for the new date
             curr_date = ping['ts'].date()
+        
+        if curr_date :
+            day_movement_list.append(curr_date_movement)
+            if curr_date_movement:
+                active_days_count += 1
         
         if (len(day_movement_list) < MIN_ACTIVE_DAYS or 
                 False in day_movement_list[-MIN_ACTIVE_DAYS:]):
