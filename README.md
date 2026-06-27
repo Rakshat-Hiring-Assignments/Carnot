@@ -62,16 +62,22 @@ Example response:
 
 # How to Run
 
+## Prerequisites
+* Python 3.12+
+* uv
+
 ## Install dependencies
 
 ```bash
-pip install -r requirements.txt
+git clone https://github.com/Rakshat-Hiring-Assignments/Carnot.git
+cd Carnot
+uv sync
 ```
 
 ## Start the server
 
 ```bash
-uvicorn app.main:app
+uv run uvicorn app.main:app
 ```
 
 API documentation:
