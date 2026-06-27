@@ -12,6 +12,9 @@ APP_PORT = config["app"]["port"]
 
 PINGS_CSV_PATH = PROJECT_PATH / config["data"]["pings_csv"]
 VEHICLES_CSV_PATH = PROJECT_PATH / config["data"]["vehicles"]
+OUTPUT_FOLDER_NAME = config["data"]["output_folder"]
+OUTPUT_FOLDER_PATH = PROJECT_PATH / OUTPUT_FOLDER_NAME
+OUTPUT_FOLDER_PATH.mkdir(exist_ok=True)
 
 TS_FORMATS = config["processing"]["ts_formats"]
 MAX_REASONABLE_SPEED_KMPH = config["processing"]["max_reasonable_speed_kmph"]

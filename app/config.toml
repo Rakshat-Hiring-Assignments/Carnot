@@ -5,6 +5,7 @@ port = 8000
 [data]
 pings_csv = "pings.csv"
 vehicles = "vehicles.csv"
+output_folder = "outputs"
 
 [processing]
 ts_formats = [
