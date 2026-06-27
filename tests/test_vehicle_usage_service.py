@@ -1,7 +1,10 @@
 import pytest
 from datetime import datetime, timedelta
 
-from app.utils.vehicle_services import VehicleUsageService
+from fastapi.testclient import TestClient
+
+from app.main import app
+from app.utils.vehicle_services import VehicleUsageResponse, VehicleUsageService
 
 
 class DummyCSVRepository:
@@ -23,9 +26,23 @@ def service(monkeypatch):
     return VehicleUsageService()
 
 
+@pytest.fixture
+def start_ts():
+    return datetime(2026, 1, 1, 8, 0, 0)
+
+
+@pytest.fixture
+def last_ts():
+    return datetime(2026, 1, 8, 12, 0, 0)
+
+
+def make_ping(ts, odometer_km, device_id="device-123"):
+    return {"device_id": device_id, "ts": ts, "odometer_km": odometer_km}
+
+
 class TestIterValidMovements:
 
-    def test_should_yield_valid_movement(self, service):
+    def test_should_yield_valid_movement(self, service, start_ts):
         """
         Arrange:
             Create two valid pings with increasing odometer.
@@ -38,10 +55,9 @@ class TestIterValidMovements:
             - Distance is correct.
             - Speed is correct.
         """
-        start_ts = datetime(2026, 1, 1, 8, 0, 0)
         pings = [
-            {"device_id": "device-123", "ts": start_ts, "odometer_km": 100.0},
-            {"device_id": "device-123", "ts": start_ts + timedelta(hours=2), "odometer_km": 140.0},
+            make_ping(start_ts, 100.0),
+            make_ping(start_ts + timedelta(hours=2), 140.0),
         ]
 
         movements = list(service._iter_valid_movements(pings))
@@ -52,7 +68,7 @@ class TestIterValidMovements:
         assert movement.speed_kmph == pytest.approx(20.0)
         assert movement.timestamp == start_ts + timedelta(hours=2)
 
-    def test_should_ignore_odometer_reset(self, service):
+    def test_should_ignore_odometer_reset(self, service, start_ts):
         """
         Arrange:
             100 -> 120 -> 10 -> 20
@@ -62,12 +78,11 @@ class TestIterValidMovements:
             - Reset ignored.
             - Movement after reset counted.
         """
-        start_ts = datetime(2026, 1, 1, 8, 0, 0)
         pings = [
-            {"device_id": "device-123", "ts": start_ts, "odometer_km": 100.0},
-            {"device_id": "device-123", "ts": start_ts + timedelta(hours=1), "odometer_km": 120.0},
-            {"device_id": "device-123", "ts": start_ts + timedelta(hours=2), "odometer_km": 10.0},
-            {"device_id": "device-123", "ts": start_ts + timedelta(hours=3), "odometer_km": 20.0},
+            make_ping(start_ts, 100.0),
+            make_ping(start_ts + timedelta(hours=1), 120.0),
+            make_ping(start_ts + timedelta(hours=2), 10.0),
+            make_ping(start_ts + timedelta(hours=3), 20.0),
         ]
 
         movements = list(service._iter_valid_movements(pings))
@@ -78,7 +93,7 @@ class TestIterValidMovements:
         assert movements[1].distance_km == pytest.approx(10.0)
         assert movements[1].speed_kmph == pytest.approx(10.0)
 
-    def test_should_ignore_missing_odometer(self, service):
+    def test_should_ignore_missing_odometer(self, service, start_ts):
         """
         Arrange:
             100 -> None -> 105
@@ -86,11 +101,10 @@ class TestIterValidMovements:
         Assert:
             Missing odometer readings are skipped and valid subsequent movement is counted.
         """
-        start_ts = datetime(2026, 1, 1, 8, 0, 0)
         pings = [
-            {"device_id": "device-123", "ts": start_ts, "odometer_km": 100.0},
-            {"device_id": "device-123", "ts": start_ts + timedelta(hours=1), "odometer_km": None},
-            {"device_id": "device-123", "ts": start_ts + timedelta(hours=2), "odometer_km": 105.0},
+            make_ping(start_ts, 100.0),
+            make_ping(start_ts + timedelta(hours=1), None),
+            make_ping(start_ts + timedelta(hours=2), 105.0),
         ]
 
         movements = list(service._iter_valid_movements(pings))
@@ -99,7 +113,7 @@ class TestIterValidMovements:
         assert movements[0].distance_km == pytest.approx(5.0)
         assert movements[0].speed_kmph == pytest.approx(2.5)
 
-    def test_should_ignore_impossible_speed(self, service):
+    def test_should_ignore_impossible_speed(self, service, start_ts):
         """
         Arrange:
             Create two pings that imply an impossible speed.
@@ -107,17 +121,16 @@ class TestIterValidMovements:
         Assert:
             No movement should be yielded.
         """
-        start_ts = datetime(2026, 1, 1, 8, 0, 0)
         pings = [
-            {"device_id": "device-123", "ts": start_ts, "odometer_km": 100.0},
-            {"device_id": "device-123", "ts": start_ts + timedelta(minutes=1), "odometer_km": 200.0},
+            make_ping(start_ts, 100.0),
+            make_ping(start_ts + timedelta(minutes=1), 200.0),
         ]
 
         movements = list(service._iter_valid_movements(pings))
 
         assert movements == []
 
-    def test_should_ignore_duplicate_timestamp(self, service):
+    def test_should_ignore_duplicate_timestamp(self, service, start_ts):
         """
         Arrange:
             Two pings with identical timestamps.
@@ -125,17 +138,16 @@ class TestIterValidMovements:
         Assert:
             Movement should be ignored.
         """
-        start_ts = datetime(2026, 1, 1, 8, 0, 0)
         pings = [
-            {"device_id": "device-123", "ts": start_ts, "odometer_km": 100.0},
-            {"device_id": "device-123", "ts": start_ts, "odometer_km": 120.0},
+            make_ping(start_ts, 100.0),
+            make_ping(start_ts, 120.0),
         ]
 
         movements = list(service._iter_valid_movements(pings))
 
         assert movements == []
 
-    def test_should_sort_pings_before_processing(self, service):
+    def test_should_sort_pings_before_processing(self, service, start_ts):
         """
         Arrange:
             Supply pings out of chronological order.
@@ -143,11 +155,10 @@ class TestIterValidMovements:
         Assert:
             Correct movement sequence is produced.
         """
-        start_ts = datetime(2026, 1, 1, 8, 0, 0)
         pings = [
-            {"device_id": "device-123", "ts": start_ts + timedelta(hours=2), "odometer_km": 150.0},
-            {"device_id": "device-123", "ts": start_ts, "odometer_km": 100.0},
-            {"device_id": "device-123", "ts": start_ts + timedelta(hours=1), "odometer_km": 120.0},
+            make_ping(start_ts + timedelta(hours=2), 150.0),
+            make_ping(start_ts, 100.0),
+            make_ping(start_ts + timedelta(hours=1), 120.0),
         ]
 
         movements = list(service._iter_valid_movements(pings))
@@ -163,7 +174,7 @@ class TestIterValidMovements:
 
 class TestComputeTotalDistance:
 
-    def test_should_compute_total_distance(self, service):
+    def test_should_compute_total_distance(self, service, start_ts):
         """
         Arrange:
             Several valid movements.
@@ -171,11 +182,10 @@ class TestComputeTotalDistance:
         Assert:
             Total equals sum of all yielded movements.
         """
-        start_ts = datetime(2026, 1, 1, 8, 0, 0)
         pings = [
-            {"device_id": "device-123", "ts": start_ts, "odometer_km": 100.0},
-            {"device_id": "device-123", "ts": start_ts + timedelta(hours=1), "odometer_km": 120.0},
-            {"device_id": "device-123", "ts": start_ts + timedelta(hours=2), "odometer_km": 150.0},
+            make_ping(start_ts, 100.0),
+            make_ping(start_ts + timedelta(hours=1), 120.0),
+            make_ping(start_ts + timedelta(hours=2), 150.0),
         ]
 
         total_distance = service._compute_total_distance(pings)
@@ -185,7 +195,7 @@ class TestComputeTotalDistance:
 
 class TestComputeActiveDays:
 
-    def test_should_count_unique_active_days(self, service):
+    def test_should_count_unique_active_days(self, service, start_ts):
         """
         Arrange:
             Multiple movements on the same day.
@@ -193,11 +203,10 @@ class TestComputeActiveDays:
         Assert:
             Day counted only once.
         """
-        start_ts = datetime(2026, 1, 1, 8, 0, 0)
         pings = [
-            {"device_id": "device-123", "ts": start_ts, "odometer_km": 100.0},
-            {"device_id": "device-123", "ts": start_ts + timedelta(hours=1), "odometer_km": 120.0},
-            {"device_id": "device-123", "ts": start_ts + timedelta(hours=2), "odometer_km": 140.0},
+            make_ping(start_ts, 100.0),
+            make_ping(start_ts + timedelta(hours=1), 120.0),
+            make_ping(start_ts + timedelta(hours=2), 140.0),
         ]
 
         active_days, status = service._compute_active_days(pings)
@@ -205,7 +214,7 @@ class TestComputeActiveDays:
         assert active_days == 1
         assert status == "active"
 
-    def test_should_mark_vehicle_active(self, service):
+    def test_should_mark_vehicle_active(self, service, last_ts):
         """
         Arrange:
             Movement occurs within the last 7 days.
@@ -213,10 +222,9 @@ class TestComputeActiveDays:
         Assert:
             Status == active.
         """
-        last_ts = datetime(2026, 1, 8, 12, 0, 0)
         pings = [
-            {"device_id": "device-123", "ts": last_ts - timedelta(days=1), "odometer_km": 100.0},
-            {"device_id": "device-123", "ts": last_ts, "odometer_km": 120.0},
+            make_ping(last_ts - timedelta(days=1), 100.0),
+            make_ping(last_ts, 120.0),
         ]
 
         active_days, status = service._compute_active_days(pings)
@@ -224,7 +232,7 @@ class TestComputeActiveDays:
         assert active_days == 1
         assert status == "active"
 
-    def test_should_mark_vehicle_inactive(self, service):
+    def test_should_mark_vehicle_inactive(self, service, last_ts):
         """
         Arrange:
             No movement in the last 7 days.
@@ -232,10 +240,9 @@ class TestComputeActiveDays:
         Assert:
             Status == inactive.
         """
-        last_ts = datetime(2026, 1, 14, 12, 0, 0)
         pings = [
-            {"device_id": "device-123", "ts": last_ts - timedelta(days=10), "odometer_km": 100.0},
-            {"device_id": "device-123", "ts": last_ts - timedelta(days=9), "odometer_km": 120.0},
+            make_ping(last_ts + timedelta(days=6) - timedelta(days=10), 100.0),
+            make_ping(last_ts + timedelta(days=6) - timedelta(days=9), 120.0),
         ]
 
         active_days, status = service._compute_active_days(pings)
@@ -266,7 +273,7 @@ class TestComputeVehicleUsage:
         assert response.total_distance_km == pytest.approx(0.0)
         assert response.active_days == 0
 
-    def test_should_return_usage_for_valid_vehicle(self, service):
+    def test_should_return_usage_for_valid_vehicle(self, service, start_ts):
         """
         Arrange:
             Vehicle exists with valid pings.
@@ -274,11 +281,10 @@ class TestComputeVehicleUsage:
         Assert:
             Response model contains expected values.
         """
-        start_ts = datetime(2026, 1, 1, 8, 0, 0)
         pings = [
-            {"device_id": "device-123", "ts": start_ts, "odometer_km": 100.0},
-            {"device_id": "device-123", "ts": start_ts + timedelta(hours=1), "odometer_km": 120.0},
-            {"device_id": "device-123", "ts": start_ts + timedelta(hours=2), "odometer_km": 150.0},
+            make_ping(start_ts, 100.0),
+            make_ping(start_ts + timedelta(hours=1), 120.0),
+            make_ping(start_ts + timedelta(hours=2), 150.0),
         ]
         service.csv_repository.vehicles_map = {"device-123": {"name": "Test Vehicle"}}
         service.pings_by_device = {"device-123": pings}
@@ -305,3 +311,51 @@ class TestComputeVehicleUsage:
         response = service.compute_vehicle_usage("unknown-device")
 
         assert response is None
+
+
+class TestVehicleUsageAPI:
+
+    def test_should_return_200_and_vehicle_usage_for_valid_vehicle(self, monkeypatch):
+        """
+        Arrange:
+            - Mock the VehicleUsageService.
+            - Configure it to return a valid VehicleUsageResponse
+              for a known device_id.
+
+        Act:
+            - Send a GET request to:
+              /vehicles/{device_id}/usage
+
+        Assert:
+            - Response status code is 200.
+            - Response body contains:
+                - total_distance_km
+                - active_days
+                - status
+            - Response values match the mocked service output.
+            - VehicleUsageService.compute_vehicle_usage()
+              is called exactly once with the requested device_id.
+        """
+        expected_response = VehicleUsageResponse(
+            total_distance_km=42.5,
+            active_days=3,
+            status="active",
+        )
+        calls = []
+
+        def fake_compute_vehicle_usage(device_id: str):
+            calls.append(device_id)
+            return expected_response
+
+        monkeypatch.setattr("app.api_routes.vehicles.vehicles.compute_vehicle_usage", fake_compute_vehicle_usage)
+
+        with TestClient(app) as client:
+            response = client.get("/vehicles/device-123/usage")
+
+        assert response.status_code == 200
+        assert response.json() == {
+            "total_distance_km": 42.5,
+            "active_days": 3,
+            "status": "active",
+        }
+        assert calls == ["device-123"]
