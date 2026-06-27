@@ -2,7 +2,7 @@ import logging
 
 from fastapi import APIRouter, HTTPException
 
-from app.utils.vehicle_utils import VehicleUsageService
+from app.utils.vehicle_services import VehicleUsageService
 
 router = APIRouter()
 vehicles = VehicleUsageService()
