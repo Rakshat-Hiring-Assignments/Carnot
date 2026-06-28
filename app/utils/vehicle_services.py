@@ -80,7 +80,8 @@ class VehicleUsageService:
             int: Number of unique active days
             str: Status of active or inactive
         """
-        active_days = {movement.timestamp.date() for movement in self._iter_valid_movements(pings)}
+        active_days = {movement.timestamp.date() for movement in self._iter_valid_movements(pings) 
+                       if movement.distance_km > 0}
         last_ping_date = max(ping['ts'] for ping in pings).date()
         cutoff = last_ping_date - timedelta(days=MIN_ACTIVE_DAYS - 1)
         if any(day >= cutoff for day in active_days):

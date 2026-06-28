@@ -241,12 +241,12 @@ class TestComputeActiveDays:
             Status == inactive.
         """
         pings = [
-            make_ping(last_ts + timedelta(days=6) - timedelta(days=10), 100.0),
-            make_ping(last_ts + timedelta(days=6) - timedelta(days=9), 120.0),
+            make_ping(last_ts - timedelta(days=9, hours=2), 100.0),
+            make_ping(last_ts - timedelta(days=9), 120.0),  # last movement
+            make_ping(last_ts, 120.0),                       # unchanged for 8 days
+            make_ping(last_ts + timedelta(minutes=10), 120.0),                       # unchanged for 8 days
         ]
-
         active_days, status = service._compute_active_days(pings)
-
         assert active_days == 1
         assert status == "inactive"
 
