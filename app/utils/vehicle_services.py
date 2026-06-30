@@ -121,7 +121,7 @@ class VehicleUsageService:
                 continue
 
             distance = odometer - last_odometer
-            if distance < 0:
+            if distance <= 0:
                 logger.warning(
                     "Odometer reading decreased for device %s at %s, indicating device reset/replaced. Ignoring this reading.",
                     ping["device_id"],
