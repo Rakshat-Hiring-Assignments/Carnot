@@ -64,7 +64,9 @@ class VehicleUsageService:
         Returns:
             float: Total distance traveled in kilometers
         """       
-        total_distance = sum(movement.distance_km for movement in self._iter_valid_movements(pings))
+        total_distance = round(sum(movement.distance_km 
+                                   for movement in self._iter_valid_movements(pings)), 
+                                   2)
         return total_distance
 
     def _compute_active_days(self, pings) -> tuple[int, str]:
